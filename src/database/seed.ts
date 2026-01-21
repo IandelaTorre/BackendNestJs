@@ -22,7 +22,7 @@ const main = async () => {
     const rolesData = [
         { name: 'admin', visualName: 'Administrador' },
         { name: 'user', visualName: 'Usuario' },
-        { name: 'guest', visualName: 'Invitado' },
+        { name: 'guest', visualName: 'Solo lectura' },
     ];
 
     for (const role of rolesData) {
