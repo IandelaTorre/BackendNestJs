@@ -25,15 +25,13 @@ export class TasksController {
 
     @Post()
     @ApiOperation({ summary: 'Create task' })
-    @UsePipes(new ZodValidationPipe(CreateTaskSchema))
-    async create(@Body() createTaskDto: CreateTaskDto) {
+    async create(@Body(new ZodValidationPipe(CreateTaskSchema)) createTaskDto: CreateTaskDto) {
         return this.tasksService.create(createTaskDto);
     }
 
     @Patch(':id')
     @ApiOperation({ summary: 'Update task' })
-    @UsePipes(new ZodValidationPipe(UpdateTaskSchema))
-    async update(@Param('id', ParseIntPipe) id: number, @Body() updateTaskDto: UpdateTaskDto) {
+    async update(@Param('id', ParseIntPipe) id: number, @Body(new ZodValidationPipe(UpdateTaskSchema)) updateTaskDto: UpdateTaskDto) {
         return this.tasksService.update(id, updateTaskDto);
     }
 
