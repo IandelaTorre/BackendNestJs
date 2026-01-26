@@ -9,15 +9,6 @@ import { CreateTaskDto, UpdateTaskDto } from './dto/tasks.dto';
 export class TasksRepository {
     constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) { }
 
-    private getIncludes(includeParams: string[]) {
-        // Return flags for what to include
-        return {
-            status: includeParams.includes('status'),
-            assignedBy: includeParams.includes('assignedBy'),
-            assignedTo: includeParams.includes('assignedTo'),
-        };
-    }
-
     async findAll(include: string[] = []) {
         const assignedByUsers = aliasedTable(users, 'assigned_by_users');
         const assignedToUsers = aliasedTable(users, 'assigned_to_users');
@@ -35,32 +26,17 @@ export class TasksRepository {
             query = query.leftJoin(catalogTaskStatuses, eq(tasks.statusId, catalogTaskStatuses.statusId)) as any;
         }
         if (include.includes('assignedBy')) {
-            query = query.leftJoin(assignedByUsers, eq(tasks.assignedByUuid, assignedByUsers.uuid)) as any;
+            query = query.leftJoin(assignedByUsers, eq(tasks.assignedByCode, assignedByUsers.userCode)) as any;
         }
         if (include.includes('assignedTo')) {
-            query = query.leftJoin(assignedToUsers, eq(tasks.assignedToUuid, assignedToUsers.uuid)) as any;
+            query = query.leftJoin(assignedToUsers, eq(tasks.assignedToCode, assignedToUsers.userCode)) as any;
         }
 
         query = query.orderBy(desc(tasks.createdAt)) as any;
 
         const results = await query;
 
-        return results.map(row => {
-            const result: any = { ...row.task };
-            // Ensure UUID fields are present (Drizzle select { task: tasks } usually includes all columns)
-            // But we want to be explicit if needed, though they exist on the object now as assignedByUuid/assignedToUuid because of schema update.
-
-            if (row.status) result.status = row.status;
-            if (row.assignedBy) {
-                const { password, ...assignedBySafe } = row.assignedBy as any;
-                result.assignedBy = assignedBySafe;
-            }
-            if (row.assignedTo) {
-                const { password, ...assignedToSafe } = row.assignedTo as any;
-                result.assignedTo = assignedToSafe;
-            }
-            return result;
-        });
+        return results.map(row => this.mapRowToResult(row));
     }
 
     async findById(id: number, include: string[] = []) {
@@ -80,31 +56,52 @@ export class TasksRepository {
             query = query.leftJoin(catalogTaskStatuses, eq(tasks.statusId, catalogTaskStatuses.statusId)) as any;
         }
         if (include.includes('assignedBy')) {
-            query = query.leftJoin(assignedByUsers, eq(tasks.assignedByUuid, assignedByUsers.uuid)) as any;
+            query = query.leftJoin(assignedByUsers, eq(tasks.assignedByCode, assignedByUsers.userCode)) as any;
         }
         if (include.includes('assignedTo')) {
-            query = query.leftJoin(assignedToUsers, eq(tasks.assignedToUuid, assignedToUsers.uuid)) as any;
+            query = query.leftJoin(assignedToUsers, eq(tasks.assignedToCode, assignedToUsers.userCode)) as any;
         }
 
         const results = await query;
         if (results.length === 0) return null;
 
-        const row = results[0];
-        const result: any = { ...row.task };
-        if (row.status) result.status = row.status;
-        if (row.assignedBy) {
-            const { password, ...assignedBySafe } = row.assignedBy as any;
-            result.assignedBy = assignedBySafe;
-        }
-        if (row.assignedTo) {
-            const { password, ...assignedToSafe } = row.assignedTo as any;
-            result.assignedTo = assignedToSafe;
-        }
-        return result;
+        return this.mapRowToResult(results[0]);
     }
 
-    async create(data: Omit<CreateTaskDto, 'assignedByUuid'> & { assignedByUuid: string | null }) {
-        // assignedToUuid is already in data from DTO
+    async findByUserUuid(uuid: string, include: string[] = []) {
+        const assignedByUsers = aliasedTable(users, 'assigned_by_users');
+        const assignedToUsers = aliasedTable(users, 'assigned_to_users');
+
+        let query = this.db.select({
+            task: tasks,
+            ...(include.includes('status') ? { status: catalogTaskStatuses } : {}),
+            ...(include.includes('assignedBy') ? { assignedBy: assignedByUsers } : {}),
+            ...(include.includes('assignedTo') ? { assignedTo: assignedToUsers } : {}),
+        })
+            .from(tasks)
+            .innerJoin(assignedToUsers, eq(tasks.assignedToCode, assignedToUsers.userCode)) // Explicit join for filter
+            .where(and(eq(assignedToUsers.uuid, uuid), eq(tasks.isActive, true)));
+
+        if (include.includes('status')) {
+            query = query.leftJoin(catalogTaskStatuses, eq(tasks.statusId, catalogTaskStatuses.statusId)) as any;
+        }
+        if (include.includes('assignedBy')) {
+            query = query.leftJoin(assignedByUsers, eq(tasks.assignedByCode, assignedByUsers.userCode)) as any;
+        }
+        // Note: assignedTo is already joined (as inner join), but if we want to alias it as 'assignedTo' in selection object AND support optional leftJoin semantics if requested separately...
+        // Actually, for query building simplicity here, if 'assignedTo' is requested in include, we can rely on the fact that we filtering by it, so it must exist.
+        // However, the `select` above uses `assignedToUsers`.
+        // If we didn't include it in `select`, we wouldn't get the user object.
+        // The join for filtering is necessary.
+        // If `include` doesn't contain 'assignedTo', we just don't select it. The join is there for filtering.
+
+        query = query.orderBy(desc(tasks.createdAt)) as any;
+
+        const results = await query;
+        return results.map(row => this.mapRowToResult(row));
+    }
+
+    async create(data: Omit<CreateTaskDto, 'assignedByCode' | 'assignedToCode'> & { assignedByCode: string | null, assignedToCode: string }) {
         return this.db.insert(tasks).values({
             ...data,
         }).returning();
@@ -121,5 +118,19 @@ export class TasksRepository {
         return this.db.update(tasks)
             .set({ isActive: false, updatedAt: new Date() })
             .where(eq(tasks.id, id));
+    }
+
+    private mapRowToResult(row: any) {
+        const result: any = { ...row.task };
+        if (row.status) result.status = row.status;
+        if (row.assignedBy) {
+            const { password, ...assignedBySafe } = row.assignedBy as any;
+            result.assignedBy = assignedBySafe;
+        }
+        if (row.assignedTo) {
+            const { password, ...assignedToSafe } = row.assignedTo as any;
+            result.assignedTo = assignedToSafe;
+        }
+        return result;
     }
 }

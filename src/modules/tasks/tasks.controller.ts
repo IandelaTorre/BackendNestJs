@@ -23,6 +23,13 @@ export class TasksController {
         return this.tasksService.findOne(id, include);
     }
 
+    @Get('user/:uuid')
+    @ApiOperation({ summary: 'List tasks assigned to user' })
+    @ApiQuery({ name: 'include', required: false, description: 'Comma separated relations: status,assignedBy,assignedTo' })
+    async findByUser(@Param('uuid') uuid: string, @Query('include') include?: string) {
+        return this.tasksService.findByUserUuid(uuid, include);
+    }
+
     @Post()
     @ApiOperation({ summary: 'Create task' })
     async create(@Body(new ZodValidationPipe(CreateTaskSchema)) createTaskDto: CreateTaskDto) {

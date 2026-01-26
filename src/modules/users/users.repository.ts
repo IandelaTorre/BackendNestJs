@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { DRIZZLE } from '../../config/database.config';
 import type { DrizzleDB } from '../../database/types';
 import { users, roles } from '../../database/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { CreateUserDto, UpdateUserDto } from './dto/users.dto';
 // @ts-ignore
 import * as bcrypt from 'bcrypt';
@@ -53,6 +53,19 @@ export class UsersRepository {
             .from(users)
             .leftJoin(roles, eq(users.roleId, roles.id))
             .where(and(eq(users.email, email), eq(users.enabled, true)));
+
+        if (result.length === 0) return null;
+
+        const { users: u, catalog_user_roles: r } = result[0];
+        return { ...u, role: r };
+    }
+
+    async findByUserCode(userCode: string) {
+        // Case insensitive search
+        const result = await this.db.select()
+            .from(users)
+            .leftJoin(roles, eq(users.roleId, roles.id))
+            .where(and(sql`lower(${users.userCode}) = lower(${userCode})`, eq(users.enabled, true)));
 
         if (result.length === 0) return null;
 
