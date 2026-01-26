@@ -8,9 +8,9 @@ export const tasks = pgTable('tasks', {
     title: text('title').notNull(),
     description: text('description').notNull(),
     statusId: integer('status_id').notNull().references(() => catalogTaskStatuses.statusId),
-    assignedBy: uuid('assigned_by').references(() => users.uuid),
+    assignedByUuid: uuid('assigned_by_uuid').references(() => users.uuid),
     assignedAt: timestamp('assigned_at', { precision: 3 }).defaultNow().notNull(),
-    assignedTo: uuid('assigned_to').notNull().references(() => users.uuid),
+    assignedToUuid: uuid('assigned_to_uuid').notNull().references(() => users.uuid),
     createdAt: timestamp('created_at', { precision: 3 }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { precision: 3 }).defaultNow().notNull(),
     isActive: boolean('is_active').default(true),
@@ -22,12 +22,12 @@ export const tasksRelations = relations(tasks, ({ one }) => ({
         references: [catalogTaskStatuses.statusId],
     }),
     assignedByUser: one(users, {
-        fields: [tasks.assignedBy],
+        fields: [tasks.assignedByUuid],
         references: [users.uuid],
         relationName: 'assignedByRelation'
     }),
     assignedToUser: one(users, {
-        fields: [tasks.assignedTo],
+        fields: [tasks.assignedToUuid],
         references: [users.uuid],
         relationName: 'assignedToRelation'
     }),

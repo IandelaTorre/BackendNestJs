@@ -35,10 +35,10 @@ export class TasksRepository {
             query = query.leftJoin(catalogTaskStatuses, eq(tasks.statusId, catalogTaskStatuses.statusId)) as any;
         }
         if (include.includes('assignedBy')) {
-            query = query.leftJoin(assignedByUsers, eq(tasks.assignedBy, assignedByUsers.uuid)) as any;
+            query = query.leftJoin(assignedByUsers, eq(tasks.assignedByUuid, assignedByUsers.uuid)) as any;
         }
         if (include.includes('assignedTo')) {
-            query = query.leftJoin(assignedToUsers, eq(tasks.assignedTo, assignedToUsers.uuid)) as any;
+            query = query.leftJoin(assignedToUsers, eq(tasks.assignedToUuid, assignedToUsers.uuid)) as any;
         }
 
         query = query.orderBy(desc(tasks.createdAt)) as any;
@@ -47,6 +47,9 @@ export class TasksRepository {
 
         return results.map(row => {
             const result: any = { ...row.task };
+            // Ensure UUID fields are present (Drizzle select { task: tasks } usually includes all columns)
+            // But we want to be explicit if needed, though they exist on the object now as assignedByUuid/assignedToUuid because of schema update.
+
             if (row.status) result.status = row.status;
             if (row.assignedBy) {
                 const { password, ...assignedBySafe } = row.assignedBy as any;
@@ -77,10 +80,10 @@ export class TasksRepository {
             query = query.leftJoin(catalogTaskStatuses, eq(tasks.statusId, catalogTaskStatuses.statusId)) as any;
         }
         if (include.includes('assignedBy')) {
-            query = query.leftJoin(assignedByUsers, eq(tasks.assignedBy, assignedByUsers.uuid)) as any;
+            query = query.leftJoin(assignedByUsers, eq(tasks.assignedByUuid, assignedByUsers.uuid)) as any;
         }
         if (include.includes('assignedTo')) {
-            query = query.leftJoin(assignedToUsers, eq(tasks.assignedTo, assignedToUsers.uuid)) as any;
+            query = query.leftJoin(assignedToUsers, eq(tasks.assignedToUuid, assignedToUsers.uuid)) as any;
         }
 
         const results = await query;
@@ -100,7 +103,8 @@ export class TasksRepository {
         return result;
     }
 
-    async create(data: Omit<CreateTaskDto, 'assignedBy'> & { assignedBy: string | null }) {
+    async create(data: Omit<CreateTaskDto, 'assignedByUuid'> & { assignedByUuid: string | null }) {
+        // assignedToUuid is already in data from DTO
         return this.db.insert(tasks).values({
             ...data,
         }).returning();

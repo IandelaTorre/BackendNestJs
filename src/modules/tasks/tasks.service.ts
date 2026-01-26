@@ -19,8 +19,8 @@ export class TasksService {
     }
 
     async create(data: CreateTaskDto) {
-        const { assignedBy, ...rest } = data;
-        const [task] = await this.repository.create({ ...rest, assignedBy: assignedBy || null });
+        const { assignedByUuid, ...rest } = data;
+        const [task] = await this.repository.create({ ...rest, assignedByUuid: assignedByUuid || null });
         return task;
     }
 
