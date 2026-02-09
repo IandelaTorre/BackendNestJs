@@ -8,4 +8,8 @@ export const envConfig = () => ({
     },
     port: parseInt(process.env.PORT || '3000', 10),
     environment: process.env.NODE_ENV,
+    smtpHost: process.env.SMTP_HOST || 'smtp.gmail.com',
+    smtpPort: parseInt(process.env.SMTP_PORT || '587', 10),
+    smtpUser: process.env.SMTP_USER,
+    smtpPass: process.env.SMTP_PASS,
 });

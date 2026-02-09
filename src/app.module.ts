@@ -10,6 +10,7 @@ import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { UserLogsModule } from './modules/user-logs/user-logs.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { MailModule } from './modules/mail/mail.module';
 
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
@@ -27,6 +28,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter'; //
     RolesModule,
     UserLogsModule,
     TasksModule,
+    MailModule,
   ],
   providers: [
     {
