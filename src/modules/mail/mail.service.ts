@@ -18,8 +18,13 @@ export class MailService {
             },
             tls: {
                 rejectUnauthorized: false
-            }
-        });
+            },
+            // Specific settings for cloud environments
+            family: 4,
+            connectionTimeout: 10000,
+            greetingTimeout: 5000,
+            socketTimeout: 10000,
+        } as any);
     }
 
     async sendMail(to: string, subject: string, html: string) {
