@@ -11,7 +11,7 @@ export class MailService {
         this.transporter = nodemailer.createTransport({
             host: this.configService.get<string>('smtpHost'),
             port: this.configService.get<number>('smtpPort'),
-            secure: false,
+            secure: this.configService.get<number>('smtpPort') === 465,
             auth: {
                 user: this.configService.get<string>('smtpUser'),
                 pass: this.configService.get<string>('smtpPass'),
@@ -20,10 +20,8 @@ export class MailService {
                 rejectUnauthorized: false
             },
             // Specific settings for cloud environments
-            family: 4,
-            connectionTimeout: 10000,
-            greetingTimeout: 5000,
-            socketTimeout: 10000,
+            logger: true,
+            debug: true,
         } as any);
     }
 
